@@ -62,15 +62,14 @@ var  chkToken=function(a) {
     else return 0;
 }
 
-var removeToken=function(a,t) {
-    console.log(`removeToken with data a: ${a}`);
-    var id=document.getElementById(a);
-    var n=id.childElementCount;
-    if(n){
-        id.querySelector("#"+t).remove();
-    }
-    return;
-}
+// ---------- UPDATED ----------
+var removeToken = function(a, t) {
+    var id = document.getElementById(a);
+    if (!id) return;
+
+    let token = id.querySelector("#" + t);
+    if (token) token.remove();
+};
 
 var killToken = function(a, p) {
     console.log("killToken");
@@ -157,338 +156,439 @@ var newa = "";
 var newb = "";
 var enteringInWinning = false;
 
-var move= function(a, b, t, p, diceValue){
-    console.log("a: "+a+", b: "+b+", t: "+t+" p: "+p+", diceValue: "+diceValue);
-    let dicetotalValue = diceValue;
-    var temp = document.getElementById(b);
-    if(temp.childElementCount){
-        if((!temp.classList.contains("dark"))&&(temp.firstChild.id[0] == p)){
-            alert("The destination block contains your token! Select a different token");
-            console.log("moving here first if");
-            playerTurn(p, dicetotalValue);
-            return;
+var move = function (a, b, t, p, diceValue) {
+
+    console.log(`MOVE → a:${a}, b:${b}, t:${t}, p:${p}, dice:${diceValue}`);
+
+    let newa = "";
+    let newb = "";
+    let enteringInWinning = false;
+    lastTokenMove = false;
+
+    const destBlock = document.getElementById(b);
+
+    // -------- BLOCKED BY OWN TOKEN --------
+    if (
+        destBlock &&
+        destBlock.childElementCount &&
+        !destBlock.classList.contains("dark") &&
+        destBlock.firstChild.id[0] === p
+    ) {
+        alert("The destination block contains your token! Select a different token");
+        playerTurn(p, diceValue);
+        return;
+    }
+
+    // -------- OPENING MOVE --------
+    if (opening) {
+        removeToken(a, t);
+        addToken(b, t, p);
+        opening = false;
+        play(playerCycle(p, diceValue));
+        return;
+    }
+
+    const startColor = splitString(a, "string");
+    const destColor = splitString(b, "string");
+    const startNum   = Number(splitString(a, "num"));
+
+    const farAwayFromNewColorPath = 7 - startNum; // ✅ FIXED
+
+    // -------- STEP BY STEP MOVE --------
+    for (let ii = 1; ii <= diceValue; ii++) {
+
+        if (ii === diceValue) lastTokenMove = true;
+
+        // ---------- DECIDE FROM ----------
+        if (ii === 1) {
+            newa = a;
         } else {
-            console.log("moving here first else");
+            newa = newb;
+        }
 
-            // Now getting how much token is far away from that new color path
-            let farAwayFromNewColorPath = 13 - Number(splitString(a, "num"));
+        // ---------- SAME COLOR PATH ----------
+        if (startColor === destColor.toLowerCase()) {
 
-            if(opening){
-                removeToken(a,t);
-                addToken(b, t, p);
+            // ----- CHECK WINNING ENTRY -----
+            if (["R", "G", "Y", "B"].includes(destColor)) {
+                const farFromWin = 7 - Number(splitString(newa, "num"));
+                if (farFromWin === 0) enteringInWinning = true;
+            }
+
+            // ----- DECIDE TO -----
+            if (enteringInWinning) {
+                newb = destColor + "1";
+                enteringInWinning = false;
+            } else {
+                newb =
+                    splitString(newa, "string") +
+                    (Number(splitString(newa, "num")) + 1);
+            }
+
+        }
+        // ---------- DIFFERENT COLOR PATH ----------
+        else {
+
+            if (ii <= farAwayFromNewColorPath) {
+                newb =
+                    splitString(newa, "string") +
+                    (Number(splitString(newa, "num")) + 1);
+            } else {
+                newb =
+                    destColor +
+                    (ii - farAwayFromNewColorPath);
+            }
+        }
+
+        console.log(`STEP ${ii}: ${newa} → ${newb}`);
+
+        // ---------- SAFE MOVE ----------
+        removeToken(newa, t);
+        addToken(newb, t, p);
+    }
+
+    // -------- HARD RESET (ANTI-STUCK) --------
+    newa = "";
+    newb = "";
+    enteringInWinning = false;
+    lastTokenMove = false;
+
+    play(playerCycle(p, diceValue));
+};
+
+
+// var move= function(a, b, t, p, diceValue){
+//     console.log("a: "+a+", b: "+b+", t: "+t+" p: "+p+", diceValue: "+diceValue);
+//     let dicetotalValue = diceValue;
+//     var temp = document.getElementById(b);
+//     if(temp.childElementCount){
+//         if((!temp.classList.contains("dark"))&&(temp.firstChild.id[0] == p)){
+//             alert("The destination block contains your token! Select a different token");
+//             console.log("moving here first if");
+//             playerTurn(p, dicetotalValue);
+//             return;
+//         } else {
+//             console.log("moving here first else");
+
+//             // Now getting how much token is far away from that new color path
+//             let farAwayFromNewColorPath = 13 - Number(splitString(a, "num"));
+
+//             if(opening){
+//                 removeToken(a,t);
+//                 addToken(b, t, p);
     
-                opening = false;
-            }else{
+//                 opening = false;
+//             }else{
 
-            for (let ii=1; ii<=diceValue; ii++){
+//             for (let ii=1; ii<=diceValue; ii++){
 
-                console.log(`ii: ${ii}`);
+//                 console.log(`ii: ${ii}`);
     
-                if(ii === diceValue){
-                    console.log("true kar diya last move");
-                    lastTokenMove = true;
-                }
+//                 if(ii === diceValue){
+//                     console.log("true kar diya last move");
+//                     lastTokenMove = true;
+//                 }
     
                 
                 
-                    // Before deciding b check if token moving from one color path to another color path
-                    if(splitString(a, "string") == splitString(b, "string").toLowerCase()){
-                        // in same color path
-                        console.log("same color path");
+//                     // Before deciding b check if token moving from one color path to another color path
+//                     if(splitString(a, "string") == splitString(b, "string").toLowerCase()){
+//                         // in same color path
+//                         console.log("same color path");
     
-                            console.log(String(splitString(b, "string")));
+//                             console.log(String(splitString(b, "string")));
     
-                            // Check if the token is entering in the wining path
-                            if(String(splitString(b, "string")) == "R" || String(splitString(b, "string")) == "G" || String(splitString(b, "string")) == "Y" || String(splitString(b, "string")) == "B"){
+//                             // Check if the token is entering in the wining path
+//                             if(String(splitString(b, "string")) == "R" || String(splitString(b, "string")) == "G" || String(splitString(b, "string")) == "Y" || String(splitString(b, "string")) == "B"){
     
-                                // var enteringInWinning  = true;
+//                                 // var enteringInWinning  = true;
     
-                                var farFromEnteringInWinningPath = 7 - Number(splitString(a,"num"));
+//                                 var farFromEnteringInWinningPath = 7 - Number(splitString(a,"num"));
     
-                                console.log(farFromEnteringInWinningPath);
+//                                 console.log(farFromEnteringInWinningPath);
     
-                                // Deciding a Position individually
-                                if(ii == 1 && farFromEnteringInWinningPath != 0){
-                                    console.log("first single move same color path");
-                                    newa = a;
-                                }else if(ii == 1 && farFromEnteringInWinningPath == 0){
-                                    newa = a;
-                                    enteringInWinning = true;
+//                                 // Deciding a Position individually
+//                                 if(ii == 1 && farFromEnteringInWinningPath != 0){
+//                                     console.log("first single move same color path");
+//                                     newa = a;
+//                                 }else if(ii == 1 && farFromEnteringInWinningPath == 0){
+//                                     newa = a;
+//                                     enteringInWinning = true;
     
-                                }else if(ii <= farFromEnteringInWinningPath){
-                                    newa = newb;
-                                }else if(ii == Number(farFromEnteringInWinningPath)+1){
-                                    newa = newb;
-                                    enteringInWinning = true;
-                                }else{
-                                    console.log("single move same color path");
-                                    console.log(a);
-                                    newa = newb;
-                                }
-    
-    
+//                                 }else if(ii <= farFromEnteringInWinningPath){
+//                                     newa = newb;
+//                                 }else if(ii == Number(farFromEnteringInWinningPath)+1){
+//                                     newa = newb;
+//                                     enteringInWinning = true;
+//                                 }else{
+//                                     console.log("single move same color path");
+//                                     console.log(a);
+//                                     newa = newb;
+//                                 }
     
     
     
-                            }else{
-                                // Deciding a Position individually
-                                if(ii == 1){
-                                    console.log("first single move same color path");
-                                    newa = a;
-                                }else{
-                                    console.log("single move same color path");
-                                    newa = String(splitString(a, "string")) + String(Number(splitString(a, "num")) + ii -1);
-                                }
     
     
-                            }
+//                             }else{
+//                                 // Deciding a Position individually
+//                                 if(ii == 1){
+//                                     console.log("first single move same color path");
+//                                     newa = a;
+//                                 }else{
+//                                     console.log("single move same color path");
+//                                     newa = String(splitString(a, "string")) + String(Number(splitString(a, "num")) + ii -1);
+//                                 }
+    
+    
+//                             }
     
                             
     
-                                //Deciding b Position Individually
+//                                 //Deciding b Position Individually
     
-                                if(enteringInWinning){
+//                                 if(enteringInWinning){
     
-                                    console.log(enteringInWinning);
+//                                     console.log(enteringInWinning);
                                     
-                                    newb = String(splitString(b, "string")) + String(1);
+//                                     newb = String(splitString(b, "string")) + String(1);
     
-                                    console.log("entering in the winning path and newb: " + newb);
-                                    enteringInWinning = false;
+//                                     console.log("entering in the winning path and newb: " + newb);
+//                                     enteringInWinning = false;
     
-                                }else{
-                                    newb = String(splitString(newa, "string")) + String(Number(splitString(newa, "num")) + 1);
-                                }
+//                                 }else{
+//                                     newb = String(splitString(newa, "string")) + String(Number(splitString(newa, "num")) + 1);
+//                                 }
     
-                                console.log("newa: "+newa+", newb: "+newb);
+//                                 console.log("newa: "+newa+", newb: "+newb);
     
-                                // Now Movin the token Individually in single step
+//                                 // Now Movin the token Individually in single step
                                 
-                                removeToken(newa,t);
-                                addToken(newb, t, p);
+//                                 removeToken(newa,t);
+//                                 addToken(newb, t, p);
                                 
-                    }else{
-                        // in different color path
-                                    // Deciding a Position individually
-                                    if(ii == 1 && farAwayFromNewColorPath != 0){
-                                        newa = a;
+//                     }else{
+//                         // in different color path
+//                                     // Deciding a Position individually
+//                                     if(ii == 1 && farAwayFromNewColorPath != 0){
+//                                         newa = a;
     
-                                        //Deciding b Position Individually
-                                        newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
+//                                         //Deciding b Position Individually
+//                                         newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
                                         
                                         
-                                        console.log("newa: "+newa+", newb: "+newb);
-                                        // Now Movin the token Individually in single step
-                                        removeToken(newa,t);
-                                        addToken(newb, t, p);
+//                                         console.log("newa: "+newa+", newb: "+newb);
+//                                         // Now Movin the token Individually in single step
+//                                         removeToken(newa,t);
+//                                         addToken(newb, t, p);
     
     
-                                    }else if (ii <= farAwayFromNewColorPath){
-                                        newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
+//                                     }else if (ii <= farAwayFromNewColorPath){
+//                                         newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
     
-                                        //Deciding b Position Individually
-                                        newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
+//                                         //Deciding b Position Individually
+//                                         newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
                                         
                                         
-                                        console.log("newa: "+newa+", newb: "+newb);
-                                        // Now Movin the token Individually in single step
-                                        removeToken(newa,t);
-                                        addToken(newb, t, p);
-                                    }else if(ii == farAwayFromNewColorPath+1){
-                                        newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
+//                                         console.log("newa: "+newa+", newb: "+newb);
+//                                         // Now Movin the token Individually in single step
+//                                         removeToken(newa,t);
+//                                         addToken(newb, t, p);
+//                                     }else if(ii == farAwayFromNewColorPath+1){
+//                                         newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
     
-                                        //Deciding b Position Individually
-                                        newb = String(splitString(b, "string")) + String((ii-farAwayFromNewColorPath));  
+//                                         //Deciding b Position Individually
+//                                         newb = String(splitString(b, "string")) + String((ii-farAwayFromNewColorPath));  
                                         
-                                        console.log("newa: "+newa+", newb: "+newb);
-                                        // Now Movin the token Individually in single step
-                                        removeToken(newa,t);
-                                        addToken(newb, t, p);
-                                    }else{
-                                        newa = newb;
+//                                         console.log("newa: "+newa+", newb: "+newb);
+//                                         // Now Movin the token Individually in single step
+//                                         removeToken(newa,t);
+//                                         addToken(newb, t, p);
+//                                     }else{
+//                                         newa = newb;
     
-                                        //Deciding b Position Individually
-                                        newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
+//                                         //Deciding b Position Individually
+//                                         newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
     
-                                        console.log("newa: "+newa+", newb: "+newb);
-                                        // Now Movin the token Individually in single step
-                                        removeToken(newa,t);
-                                        addToken(newb, t, p);
-                                    }
+//                                         console.log("newa: "+newa+", newb: "+newb);
+//                                         // Now Movin the token Individually in single step
+//                                         removeToken(newa,t);
+//                                         addToken(newb, t, p);
+//                                     }
     
-                    }
+//                     }
      
-            }
+//             }
 
-        }
+//         }
 
-            // JAB B PAR KOE TOKEN HOGA TOH YEHA PE RUN HOGA,,, YEHA PAR SINGLE MOVE KARWANA HAI PAHLE THEN SEE WHY TOKEN CUTTING MIDDLE TOKENS
-            // removeToken(a,t);
-            // addToken(b, t, p);
+//             // JAB B PAR KOE TOKEN HOGA TOH YEHA PE RUN HOGA,,, YEHA PAR SINGLE MOVE KARWANA HAI PAHLE THEN SEE WHY TOKEN CUTTING MIDDLE TOKENS
+//             // removeToken(a,t);
+//             // addToken(b, t, p);
 
-            play(playerCycle(p, diceValue));
+//             play(playerCycle(p, diceValue));
             
-        }
-    } else {
-        console.log("moving here second else");
+//         }
+//     } else {
+//         console.log("moving here second else");
 
-        // Now getting how much token is far away from that new color path
-        let farAwayFromNewColorPath = 13 - Number(splitString(a, "num"));
+//         // Now getting how much token is far away from that new color path
+//         let farAwayFromNewColorPath = 13 - Number(splitString(a, "num"));
 
-        if(opening){
-            removeToken(a,t);
-            addToken(b, t, p);
+//         if(opening){
+//             removeToken(a,t);
+//             addToken(b, t, p);
 
-            opening = false;
-        }else{
+//             opening = false;
+//         }else{
     
 
-        for (let ii=1; ii<=diceValue; ii++){
+//         for (let ii=1; ii<=diceValue; ii++){
 
-            console.log(`ii: ${ii}`);
+//             console.log(`ii: ${ii}`);
 
-            if(ii === diceValue){
-                console.log("true kar diya last move");
-                lastTokenMove = true;
-            }
+//             if(ii === diceValue){
+//                 console.log("true kar diya last move");
+//                 lastTokenMove = true;
+//             }
 
             
             
-                // Before deciding b check if token moving from one color path to another color path
-                if(splitString(a, "string") == splitString(b, "string").toLowerCase()){
-                    // in same color path
-                    console.log("same color path");
+//                 // Before deciding b check if token moving from one color path to another color path
+//                 if(splitString(a, "string") == splitString(b, "string").toLowerCase()){
+//                     // in same color path
+//                     console.log("same color path");
 
-                        console.log(String(splitString(b, "string")));
+//                         console.log(String(splitString(b, "string")));
 
-                        // Check if the token is entering in the wining path
-                        if(String(splitString(b, "string")) == "R" || String(splitString(b, "string")) == "G" || String(splitString(b, "string")) == "Y" || String(splitString(b, "string")) == "B"){
+//                         // Check if the token is entering in the wining path
+//                         if(String(splitString(b, "string")) == "R" || String(splitString(b, "string")) == "G" || String(splitString(b, "string")) == "Y" || String(splitString(b, "string")) == "B"){
 
-                            // var enteringInWinning  = true;
+//                             // var enteringInWinning  = true;
 
-                            var farFromEnteringInWinningPath = 7 - Number(splitString(a,"num"));
+//                             var farFromEnteringInWinningPath = 7 - Number(splitString(a,"num"));
 
-                            console.log(farFromEnteringInWinningPath);
+//                             console.log(farFromEnteringInWinningPath);
 
-                            // Deciding a Position individually
-                            if(ii == 1 && farFromEnteringInWinningPath != 0){
-                                console.log("first single move same color path");
-                                newa = a;
-                            }else if(ii == 1 && farFromEnteringInWinningPath == 0){
-                                newa = a;
-                                enteringInWinning = true;
+//                             // Deciding a Position individually
+//                             if(ii == 1 && farFromEnteringInWinningPath != 0){
+//                                 console.log("first single move same color path");
+//                                 newa = a;
+//                             }else if(ii == 1 && farFromEnteringInWinningPath == 0){
+//                                 newa = a;
+//                                 enteringInWinning = true;
 
-                            }else if(ii <= farFromEnteringInWinningPath){
-                                newa = newb;
-                            }else if(ii == Number(farFromEnteringInWinningPath)+1){
-                                newa = newb;
-                                enteringInWinning = true;
-                            }else{
-                                console.log("single move same color path");
-                                console.log(a);
-                                newa = newb;
-                            }
-
-
+//                             }else if(ii <= farFromEnteringInWinningPath){
+//                                 newa = newb;
+//                             }else if(ii == Number(farFromEnteringInWinningPath)+1){
+//                                 newa = newb;
+//                                 enteringInWinning = true;
+//                             }else{
+//                                 console.log("single move same color path");
+//                                 console.log(a);
+//                                 newa = newb;
+//                             }
 
 
 
-                        }else{
-                            // Deciding a Position individually
-                            if(ii == 1){
-                                console.log("first single move same color path");
-                                newa = a;
-                            }else{
-                                console.log("single move same color path");
-                                newa = String(splitString(a, "string")) + String(Number(splitString(a, "num")) + ii -1);
-                            }
 
 
-                        }
+//                         }else{
+//                             // Deciding a Position individually
+//                             if(ii == 1){
+//                                 console.log("first single move same color path");
+//                                 newa = a;
+//                             }else{
+//                                 console.log("single move same color path");
+//                                 newa = String(splitString(a, "string")) + String(Number(splitString(a, "num")) + ii -1);
+//                             }
+
+
+//                         }
 
                         
 
-                            //Deciding b Position Individually
+//                             //Deciding b Position Individually
 
-                            if(enteringInWinning){
+//                             if(enteringInWinning){
 
-                                console.log(enteringInWinning);
+//                                 console.log(enteringInWinning);
                                 
-                                newb = String(splitString(b, "string")) + String(1);
+//                                 newb = String(splitString(b, "string")) + String(1);
 
-                                console.log("entering in the winning path and newb: " + newb);
-                                enteringInWinning = false;
+//                                 console.log("entering in the winning path and newb: " + newb);
+//                                 enteringInWinning = false;
 
-                            }else{
-                                newb = String(splitString(newa, "string")) + String(Number(splitString(newa, "num")) + 1);
-                            }
+//                             }else{
+//                                 newb = String(splitString(newa, "string")) + String(Number(splitString(newa, "num")) + 1);
+//                             }
 
-                            console.log("newa: "+newa+", newb: "+newb);
+//                             console.log("newa: "+newa+", newb: "+newb);
 
-                            // Now Movin the token Individually in single step
+//                             // Now Movin the token Individually in single step
                             
-                            removeToken(newa,t);
-                            addToken(newb, t, p);
+//                             removeToken(newa,t);
+//                             addToken(newb, t, p);
                             
-                }else{
-                    // in different color path
-                                // Deciding a Position individually
-                                if(ii == 1 && farAwayFromNewColorPath != 0){
-                                    newa = a;
+//                 }else{
+//                     // in different color path
+//                                 // Deciding a Position individually
+//                                 if(ii == 1 && farAwayFromNewColorPath != 0){
+//                                     newa = a;
 
-                                    //Deciding b Position Individually
-                                    newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
+//                                     //Deciding b Position Individually
+//                                     newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
                                     
                                     
-                                    console.log("newa: "+newa+", newb: "+newb);
-                                    // Now Movin the token Individually in single step
-                                    removeToken(newa,t);
-                                    addToken(newb, t, p);
+//                                     console.log("newa: "+newa+", newb: "+newb);
+//                                     // Now Movin the token Individually in single step
+//                                     removeToken(newa,t);
+//                                     addToken(newb, t, p);
 
 
-                                }else if (ii <= farAwayFromNewColorPath){
-                                    newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
+//                                 }else if (ii <= farAwayFromNewColorPath){
+//                                     newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
 
-                                    //Deciding b Position Individually
-                                    newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
+//                                     //Deciding b Position Individually
+//                                     newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
                                     
                                     
-                                    console.log("newa: "+newa+", newb: "+newb);
-                                    // Now Movin the token Individually in single step
-                                    removeToken(newa,t);
-                                    addToken(newb, t, p);
-                                }else if(ii == farAwayFromNewColorPath+1){
-                                    newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
+//                                     console.log("newa: "+newa+", newb: "+newb);
+//                                     // Now Movin the token Individually in single step
+//                                     removeToken(newa,t);
+//                                     addToken(newb, t, p);
+//                                 }else if(ii == farAwayFromNewColorPath+1){
+//                                     newa = String(splitString(a, "string")) + String((Number(splitString(a, "num")))+ii-1);
 
-                                    //Deciding b Position Individually
-                                    newb = String(splitString(b, "string")) + String((ii-farAwayFromNewColorPath));  
+//                                     //Deciding b Position Individually
+//                                     newb = String(splitString(b, "string")) + String((ii-farAwayFromNewColorPath));  
                                     
-                                    console.log("newa: "+newa+", newb: "+newb);
-                                    // Now Movin the token Individually in single step
-                                    removeToken(newa,t);
-                                    addToken(newb, t, p);
-                                }else{
-                                    newa = newb;
+//                                     console.log("newa: "+newa+", newb: "+newb);
+//                                     // Now Movin the token Individually in single step
+//                                     removeToken(newa,t);
+//                                     addToken(newb, t, p);
+//                                 }else{
+//                                     newa = newb;
 
-                                    //Deciding b Position Individually
-                                    newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
+//                                     //Deciding b Position Individually
+//                                     newb = String(splitString(newa, "string")) + String((Number(splitString(newa, "num")))+1);  
 
-                                    console.log("newa: "+newa+", newb: "+newb);
-                                    // Now Movin the token Individually in single step
-                                    removeToken(newa,t);
-                                    addToken(newb, t, p);
-                                }
+//                                     console.log("newa: "+newa+", newb: "+newb);
+//                                     // Now Movin the token Individually in single step
+//                                     removeToken(newa,t);
+//                                     addToken(newb, t, p);
+//                                 }
 
-                }
+//                 }
  
-        }
+//         }
 
-        }
+//         }
 
         
-        play(playerCycle(p, diceValue));
-    }
-}
+//         play(playerCycle(p, diceValue));
+//     }
+// }
 
 var endGame = function() {
     console.log("Game finished in " +moveCtr +" moves with players in position: "+ winners);
